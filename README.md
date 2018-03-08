@@ -13,7 +13,7 @@ psycopg2
 ### Usage
 
 Edit .env file to include db credentials
-Caution! - If using git add .env to .gitignore
+`Caution! - If using git add .env to .gitignore`
 
 Csv must include headers that match table column names
 
