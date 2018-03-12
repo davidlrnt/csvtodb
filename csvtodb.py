@@ -20,11 +20,13 @@ parser.add_argument('file', metavar='file path', type=str,
 parser.add_argument('table', metavar='table name', type=str,
                    help='db table name')
 
+parser.add_argument("--chunk", help="split csv into chunks")
 
 args = parser.parse_args()
 
 file = args.file
 table = args.table
+chunks = args.chunk
 
 dbconnection = {
 	"dbname": config('DBNAME'),
@@ -33,6 +35,14 @@ dbconnection = {
 	"password": config('PASSWORD'),
 	"port": config('PORT') 
 }
+
+
+def chunks(l, n):
+    """Yield successive n-sized chunks from l."""
+    arr = []
+    for i in range(0, len(l), n):
+        arr.append(l[i:i + n])
+    return arr
 
 def get_conn(config=dbconnection):
     try:
@@ -60,10 +70,25 @@ headerstr = ", ".join(headers)
 valplaceholders = ", ".join(["%s" for v in headers])
 
 
-query = "INSERT INTO {} ({}) VALUES ({})".format(table, headerstr, valplaceholders)
+if chunks:
 
-res = psycopg2.extras.execute_batch(cur,query,vals)
+    valuechunks = chunks(vals, 10000)
+    datalen = len(valuechunks)
+    percent = 100 / datalen
 
-conn.commit()
+    for i,chunk in enumerate(valuechunks):
+        print(str(round(percent * i, 4)) + "%")
+        query = "INSERT INTO {} ({}) VALUES ({})".format(table, headerstr, valplaceholders)
+        res = psycopg2.extras.execute_batch(cur,query,chunk)
+        conn.commit()
+
+else:
+    query = "INSERT INTO {} ({}) VALUES ({})".format(table, headerstr, valplaceholders)
+
+    res = psycopg2.extras.execute_batch(cur,query,vals)
+
+    conn.commit()
+
+
 cur.close()
 conn.close()
